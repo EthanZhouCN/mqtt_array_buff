@@ -14,6 +14,8 @@ uint16_t GetDataConnet(unsigned char *buff)//获取连接的数据包正确连�
 	unsigned int i,len,lennum = 0;
 	unsigned char *msg;
 	buff[0] = GetDataFixedHead(MQTT_TypeCONNECT,0,0,0);
+
+	
 	buff[2] = 0x00;
 	buff[3] = 0x04;
 	buff[4] = 'M';
@@ -21,7 +23,7 @@ uint16_t GetDataConnet(unsigned char *buff)//获取连接的数据包正确连�
 	buff[6] = 'T';
 	buff[7] = 'T';
 	buff[8] = 0x04;//协议级别 Protocol Level
-	buff[9] = 0 | (MQTT_StaCleanSession << 1) | (MQTT_StaWillFlag << 2)
+	buff[9] = 0 /*| (MQTT_StaCleanSession << 1)*/ | (MQTT_StaWillFlag << 2)
 							| (MQTT_StaWillQoS << 3) | (MQTT_StaWillRetain << 5) 
 							|	(MQTT_StaPasswordFlag << 6) |(MQTT_StaUserNameFlag << 7);//连接标志
 	buff[10] = MQTT_KeepAlive >> 8;
@@ -29,7 +31,7 @@ uint16_t GetDataConnet(unsigned char *buff)//获取连接的数据包正确连�
 	len = strlen(MQTT_ClientIdentifier);
 	buff[12] = len >> 8;
 	buff[13] = len;
-	msg = MQTT_ClientIdentifier;
+	msg = (unsigned char *)MQTT_ClientIdentifier;
 	for(i = 0;i<len;i++)
 	{
 		buff[14+i] =  msg[i];
@@ -41,7 +43,7 @@ uint16_t GetDataConnet(unsigned char *buff)//获取连接的数据包正确连�
 		buff[13 + lennum + 1] = len >> 8;
 		buff[13 + lennum + 2] = len;
 		lennum += 2;
-		msg = MQTT_WillTopic;
+		msg = (unsigned char *)MQTT_WillTopic;
 		for(i = 0;i<len;i++)
 		{
 			buff[14+lennum+i] =  msg[i];
@@ -51,7 +53,7 @@ uint16_t GetDataConnet(unsigned char *buff)//获取连接的数据包正确连�
 		buff[12] = len >> 8;
 		buff[13] = len;
 		lennum += 2;
-		msg = MQTT_WillMessage;
+		msg = (unsigned char *)MQTT_WillMessage;
 		for(i = 0;i<len;i++)
 		{
 			buff[14+lennum+i] =  msg[i];
@@ -64,7 +66,7 @@ uint16_t GetDataConnet(unsigned char *buff)//获取连接的数据包正确连�
 		buff[13 + lennum + 1] = len >> 8;
 		buff[13 + lennum + 2] = len;
 		lennum += 2;
-		msg = MQTT_UserName;
+		msg = (unsigned char *)MQTT_UserName;
 		for(i = 0;i<len;i++)
 		{
 			buff[14+lennum+i] =  msg[i];
@@ -78,7 +80,7 @@ uint16_t GetDataConnet(unsigned char *buff)//获取连接的数据包正确连�
 		buff[13 + lennum + 1] = len >> 8;
 		buff[13 + lennum + 2] = len;
 		lennum += 2;
-		msg = MQTT_Password;
+		msg = (unsigned char *)MQTT_Password;
 		for(i = 0;i<len;i++)
 		{
 			buff[14+lennum+i] =  msg[i];
@@ -121,10 +123,11 @@ void GetDataSUBSCRIBE(unsigned char *buff,const char *dat,unsigned int Num,unsig
 	buff[6 + lennum ] = RequestedQoS;
 	buff[1] = lennum + 5;
 }
-void GetDataPUBLISH(unsigned char *buff,unsigned char dup, unsigned char qos,unsigned char retain,const char *topic ,const char *msg)//获取发布消息的数据包
+uint16_t GetDataPUBLISH(unsigned char *buff,unsigned char dup, unsigned char qos,unsigned char retain,const char *topic ,const char *msg)//获取发布消息的数据包
 {
 	unsigned int i,len=0,lennum=0;
 	buff[0] = GetDataFixedHead(MQTT_TypePUBLISH,dup,qos,retain);
+	
 	len = strlen(topic);
 	buff[2] = len>>8;
 	buff[3] = len;
@@ -140,4 +143,72 @@ void GetDataPUBLISH(unsigned char *buff,unsigned char dup, unsigned char qos,uns
 	}
 	lennum += len;
 	buff[1] = lennum + 2;
+	return buff[1];
+	
 }
+
+
+uint16_t GetDataPointPUBLISH(unsigned char *buff,unsigned char dup, unsigned char qos,unsigned char retain,const char *topic ,const char *msg)//获取发布消息的数据包
+{
+	unsigned int i;
+	int len_size = 1;
+	*buff = GetDataFixedHead(MQTT_TypePUBLISH,dup,qos,retain);
+
+	int remainedLength = 0;
+	
+	int topic_len = strlen(topic);
+	int msg_len = strlen(msg);
+
+	remainedLength += 2; //topic_len bytes
+	remainedLength += topic_len;
+	remainedLength += 2; // PacketIdentifier bytes
+
+	remainedLength += 1; //type bytes
+	remainedLength += 2; //msg_len bytes
+	remainedLength += msg_len;
+
+	//printf("remainedLength = %d.\n", remainedLength);
+	if(remainedLength>=0x80)
+	{
+		
+		*++buff = (0x80|(remainedLength%0x80));
+		*++buff = remainedLength/0x80;
+		len_size += 2;
+	}
+	else
+	{
+		*++buff = remainedLength;
+		len_size += 1;
+	}
+	
+	
+	*++buff = topic_len>>8;
+	*++buff = topic_len;
+	
+	
+	for(i = 0;i<topic_len;i++)
+	{
+		
+		*++buff = topic[i];
+		
+	}
+	*++buff = 0;
+	*++buff = 0x2;
+
+
+	*++buff = 0x01;
+	
+	*++buff = msg_len>>8;
+	*++buff = msg_len;
+
+	
+	for(i = 0;i<msg_len;i++)
+	{
+		
+		*++buff = msg[i];
+	}
+	
+	return remainedLength + len_size;
+	
+}
+

@@ -24,7 +24,7 @@
 #define		MQTT_StaWillRetain							0	//遗嘱保留
 #define		MQTT_StaUserNameFlag						1	//用户名标志 User Name Flag
 #define		MQTT_StaPasswordFlag						1	//密码标志 Password Flag
-#define		MQTT_KeepAlive								60
+#define		MQTT_KeepAlive								120
 #define		MQTT_ClientIdentifier   					"505342358"						//客户端标识符 Client Identifier
 #define		MQTT_WillTopic								""								//遗嘱主题 Will Topic
 #define		MQTT_WillMessage							""								//遗嘱消息 Will Message
@@ -32,9 +32,11 @@
 #define		MQTT_Password								"uBJZGOHsvRD8sDttT2uPzF2BbJE="	//密码 Password
  
 unsigned char GetDataFixedHead(unsigned char MesType,unsigned char DupFlag,unsigned char QosLevel,unsigned char Retain);
-void GetDataPUBLISH(unsigned char *buff,unsigned char dup, unsigned char qos,unsigned char retain,const char *topic ,const char *msg);//获取发布消息的数据包		 	
+uint16_t GetDataPUBLISH(unsigned char *buff,unsigned char dup, unsigned char qos,unsigned char retain,const char *topic ,const char *msg);//获取发布消息的数据包		 	
 void GetDataSUBSCRIBE(unsigned char *buff,const char *dat,unsigned int Num,unsigned char RequestedQoS);//订阅主题的数据包 Num:主题序号 RequestedQoS:服务质量要求0,1或2
 void GetDataDisConnet(unsigned char *buff);//获取断开连接的数据包
 uint16_t GetDataConnet(unsigned char *buff);//获取连接的数据包正确连接返回20 02 00 00
 void GetDataPINGREQ(unsigned char *buff);//心跳请求的数据包成功返回d0 00
+uint16_t GetDataPointPUBLISH(unsigned char *buff,unsigned char dup, unsigned char qos,unsigned char retain,const char *topic ,const char *msg);//获取发布消息的数据包
+
 #endif

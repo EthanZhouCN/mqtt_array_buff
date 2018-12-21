@@ -1,0 +1,15 @@
+可用测试json
+
+{
+    "datastreams": [
+		{
+            "id": "tmp",
+            "datapoints": [
+            	{
+                    "at": "2013-04-22 00:35:43",
+                    "value": "bacd"
+                }
+            ]
+        }
+    ]
+}
