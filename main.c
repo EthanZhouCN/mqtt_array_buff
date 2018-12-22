@@ -19,6 +19,8 @@
 
 #include "mqtt.h"
 #include "cJSON.h"
+#include "cjson_utils.h"
+
 
 #define SOCK_BUFF_SIZE 1024
 
@@ -57,6 +59,8 @@ int main(int args, char **argv)
 {
 #if 1
 	uint8_t sock_buff[SOCK_BUFF_SIZE] = {0};
+	uint8_t payload_buff[SOCK_BUFF_SIZE] = {0};
+	
 	uint16_t ret = 0;
 	int sockfd = CreateTcpConnect("183.230.40.39", 6002);
 	if(sockfd > 0)
@@ -89,35 +93,13 @@ int main(int args, char **argv)
 		printf("0x%02X ", sock_buff[i]);
 	}
 	printf("\n");
-#endif
-	//------------------------
+
+
+	DoubleTypeDataPoint2String(payload_buff, "tmp", 55.4);	
 	
-#if 1
+    printf("json:\n%s\n", payload_buff);
 
-	//先创建空对象
-    cJSON *json = cJSON_CreateObject();
-    //添加数组
-    cJSON *datastreams_array = NULL;
-    cJSON_AddItemToObject(json,"datastreams", datastreams_array=cJSON_CreateArray());
-    //在数组上添加对象
-    cJSON *obj = NULL;
-    cJSON_AddItemToArray(datastreams_array, obj=cJSON_CreateObject());
-    cJSON_AddStringToObject(obj,"id","tmp");
-	cJSON *datapoints_array = NULL;
-	cJSON_AddItemToObject(obj, "datapoints", datapoints_array=cJSON_CreateArray());
-    //在对象上添加键值对
-    cJSON_AddItemToArray(datapoints_array, obj=cJSON_CreateObject());
-    cJSON_AddItemToObject(obj,"at",cJSON_CreateString("2018-12-10 17:09:38"));
-    cJSON_AddItemToObject(obj,"value",cJSON_CreateNumber(45.6));
-
-    
-  
-    
-    //清理工作
-    char *buf = cJSON_Print(json);
-    printf("json:\n%s\n", buf);
-
-	len = GetDataPointPUBLISH(sock_buff, 0, 2, 0, "$dp", buf);
+	len = GetDataPointPUBLISH((unsigned char *)sock_buff, 0, 2, 0, (char *)"$dp", (char *)payload_buff);
 
 	printf("json send len = 0x%02X.\n", len);
 	for(i=0;i<len;i++)
@@ -191,10 +173,29 @@ int main(int args, char **argv)
 	printf("\n");
 
 
+	
+	
+	unsigned char topicname[200] = {0};
+	unsigned short topiclen = 0;
+	unsigned char payload[200] = {0};
+	unsigned short payloadlen = 0;
+	
+	FixedHeader_t FixedHeader;
 
+	PlatfromCmdAnalysis(tmp_buff, &FixedHeader, &topiclen, topicname, &payloadlen, payload);
+
+	printf("FixedHeader.PacketType = %d.\n", FixedHeader.PacketType);
+	printf("FixedHeader.PacketType = %d.\n", FixedHeader.RemainingLength);
+
+	printf("topicname = %s.\n", topicname);
 
 	
-    cJSON_Delete(json);
+	printf("cmd payload recv len = 0x%02X.\n", payloadlen);
+	for(i=0;i<payloadlen;i++)
+	{
+		printf("0x%02X ", payload[i]);
+	}
+	printf("\n");
 
 #endif	
 

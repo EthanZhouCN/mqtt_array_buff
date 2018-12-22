@@ -1,5 +1,7 @@
 #include "mqtt.h"
- 
+#include "stdio.h"
+
+
 unsigned char GetDataFixedHead(unsigned char MesType,unsigned char DupFlag,unsigned char QosLevel,unsigned char Retain)
 {
 	unsigned char dat = 0;
@@ -167,7 +169,6 @@ uint16_t GetDataPointPUBLISH(unsigned char *buff,unsigned char dup, unsigned cha
 	remainedLength += 2; //msg_len bytes
 	remainedLength += msg_len;
 
-	//printf("remainedLength = %d.\n", remainedLength);
 	if(remainedLength>=0x80)
 	{
 		
@@ -211,4 +212,83 @@ uint16_t GetDataPointPUBLISH(unsigned char *buff,unsigned char dup, unsigned cha
 	return remainedLength + len_size;
 	
 }
+
+
+
+void PlatfromPUBLISHAnalysis(unsigned char *buff, FixedHeader_t *FixedHeader, VariableHeader_t *VariableHeader, unsigned char *payload)
+{
+	
+	FixedHeader->PacketType = *buff>>4;
+
+	uint8_t multiplier = 1;
+	uint32_t len = 0;
+
+	
+	do{
+		len += (*++buff & 0x7f) * multiplier;
+		multiplier *= 0x80;
+	}while((*buff & 0x80) != 0);
+
+	FixedHeader->RemainingLength = len;
+
+	VariableHeader->ProtocolNameLength = *++buff;
+	
+	memcpy(VariableHeader->ProtocolName, ++buff, VariableHeader->ProtocolNameLength);
+
+	buff += VariableHeader->ProtocolNameLength;
+	VariableHeader->ConnectFlag.UserFlag = (*buff>>7) & 0x01;
+	VariableHeader->ConnectFlag.PasswordFlag = (*buff>>6) & 0x01;
+	VariableHeader->ConnectFlag.WillRetainFlag = (*buff>>5) & 0x01;
+	VariableHeader->ConnectFlag.WillQosFlag = (*buff>>2) & 0x03;
+	VariableHeader->ConnectFlag.WillFlag = (*buff>>1) & 0x01;
+	VariableHeader->ConnectFlag.CleanSessionFlag = *buff & 0x01;
+
+	VariableHeader->KeepAlive = *++buff;
+	
+	memcpy(payload, ++buff, VariableHeader->ProtocolNameLength-10);
+	
+}
+
+
+void PlatfromCmdAnalysis(unsigned char *buff, FixedHeader_t *FixedHeader, unsigned short *topicnamelen, unsigned char *topicname, unsigned short *payloadlen, unsigned char *payload)
+{
+	
+	FixedHeader->PacketType = *buff>>4;
+
+	uint8_t multiplier = 1;
+	uint32_t len = 0;
+	uint16_t topic_len = 0;
+	uint16_t payload_len = 0;
+	
+	do{
+		len += (*++buff & 0x7f) * multiplier;
+		multiplier *= 0x80;
+	}while((*buff & 0x80) != 0);
+
+	FixedHeader->RemainingLength = len;
+	printf("FixedHeader->RemainingLength = %d.\n", FixedHeader->RemainingLength);
+
+	topic_len = (*++buff)<<8;
+	topic_len |= (*++buff);
+	printf("topic_len = %d.\n", topic_len);
+	if(topicnamelen != NULL)
+	{
+		*topicnamelen = topic_len;
+	}
+	
+	memcpy(topicname, ++buff, topic_len);
+
+	buff += topic_len;
+
+	payload_len = len - topic_len - 2;  //topic_len byte
+	if(payloadlen != NULL)
+	{
+		*payloadlen = payload_len;
+	}
+	
+	memcpy(payload, buff, payload_len);
+	
+}
+
+
 

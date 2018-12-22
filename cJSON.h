@@ -5,6 +5,7 @@
 extern "C"
 {
 #endif
+#include <ctype.h>
 
 /* cJSON Types: */
 #define cJSON_False 0
